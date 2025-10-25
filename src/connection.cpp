@@ -3,8 +3,8 @@
 namespace simple_messaging
 {
 
-	connection::connection(owner parent, boost::asio::io_context& asioContext, boost::asio::ip::tcp::socket socket, queue_with_lock<owned_message>& qIn)
-		: socket_(std::move(socket)), asio_context_(asioContext), input_messages_queue_(qIn) {
+	connection::connection(owner parent, boost::asio::io_context& asio_context, boost::asio::ip::tcp::socket socket, queue_with_lock<owned_message>& input_messages_queue)
+		: socket_(std::move(socket)), asio_context_(asio_context), input_messages_queue_(input_messages_queue) {
 		owner_ = parent;
 	}
 
@@ -50,7 +50,7 @@ namespace simple_messaging
 		boost::asio::post(asio_context_,
 			[this, msg]() {
 				bool already_writing = !output_messages_queue_.empty();
-				output_messages_queue_.push_back(msg);
+				output_messages_queue_.push(msg);
 				if (!already_writing) {
 					write_header();
 				}
@@ -64,7 +64,7 @@ namespace simple_messaging
 					if (output_messages_queue_.front().header.size > 0)	{
 						write_body();
 					} else {
-						output_messages_queue_.pop_front();
+						output_messages_queue_.pop();
 						if (!output_messages_queue_.empty()) {
 							write_header();
 						}
@@ -81,7 +81,7 @@ namespace simple_messaging
 			[this](std::error_code ec, [[maybe_unused]]std::size_t length)
 			{
 				if (!ec) {
-					output_messages_queue_.pop_front();
+					output_messages_queue_.pop();
 					if (!output_messages_queue_.empty()) {
 						write_header();
 					}
@@ -123,9 +123,9 @@ namespace simple_messaging
 
 	void connection::add_to_incoming_messages_queue() {				
 		if(owner_ == owner::server) {
-			input_messages_queue_.push_back({ this->shared_from_this(), message_in_construction_ });
+			input_messages_queue_.push({ this->shared_from_this(), message_in_construction_ });
 		} else {
-			input_messages_queue_.push_back({ nullptr, message_in_construction_ });
+			input_messages_queue_.push({ nullptr, message_in_construction_ });
 		}
 		read_message_header();
 	}

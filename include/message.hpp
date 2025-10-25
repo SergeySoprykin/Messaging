@@ -13,7 +13,10 @@ namespace simple_messaging
 enum class MessageType : uint32_t {
 	ServerAccept,
 	ServerDeny,
+	ServerAskName,
+	ServerTellName,
 	ServerPing,
+	MessageClient,
 	MessageAll,
 	ServerMessage,
 };

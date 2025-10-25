@@ -3,30 +3,42 @@
 #include "client.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <thread>
 
-int main()
+int main(int argc, char* argv[])
 {
-	simple_messaging::client cllient;
-	cllient.connect("127.0.0.1", 60000);
+	std::string my_name;
+	std::string dest_name;
+
+	if (argc >= 3) {
+        my_name = argv[1];
+        dest_name = argv[2];
+    } else {
+        std::cout << "Need two strings in arguments: [my_name] [dest_name]" << std::endl;
+    }
+
+	simple_messaging::client client1;
+	client1.set_name(my_name);
+	client1.connect("127.0.0.1", 60000);
 
 	bool quit_requested = false;
 	while (!quit_requested) {
 		// std::this_thread::sleep_for(std::chrono::seconds(2));
-		// c.PingServer();
-		std::this_thread::sleep_for(std::chrono::seconds(2));
-		if (cllient.get_id() != "") {
-			cllient.send_to_all("Hello all from " + cllient.get_id());
-		}
+		// client1.ping_server();
+		// std::this_thread::sleep_for(std::chrono::seconds(2));
+    	// client1.send_to_all("Hello all from " + client1.get_name());
 
-		if (cllient.is_connected()) {
-			if (!cllient.get_incoming_messages().empty()) {
-				auto msg = cllient.get_incoming_messages().pop_front().msg;
+		std::this_thread::sleep_for(std::chrono::seconds(2));
+    	client1.send_to_client(dest_name, "Hi from " + my_name);
+
+		if (client1.is_connected()) {
+			if (!client1.get_incoming_messages().empty()) {
+				auto msg = client1.get_incoming_messages().pop().msg;
 
 				switch (msg.header.id) {
 				case simple_messaging::MessageType::ServerAccept: {
-					cllient.set_id(msg.body);
-					std::cout << "Server Accepted Connection, Id given: " << cllient.get_id() << std::endl;
+					std::cout << "Server Accepted Connection" << std::endl;
 				}
 				break;
 				case simple_messaging::MessageType::ServerPing:	{
@@ -40,11 +52,20 @@ int main()
 					std::cout << "Connection denied: " << std::endl;
 				}
 				break;
-				case simple_messaging::MessageType::MessageAll:	{ }
-				break;
 				case simple_messaging::MessageType::ServerMessage: {
 					std::cout << msg.body << std::endl;
 				}
+				break;
+				case simple_messaging::MessageType::ServerAskName: {
+					std::cout << "Server asked client name " << std::endl;
+					simple_messaging::message reply_msg {
+						{simple_messaging::MessageType::ServerTellName, static_cast<uint32_t>(client1.get_name().size())},
+						client1.get_name() };
+						 client1.send(reply_msg);
+					std::cout << "Sent name: " << client1.get_name() << std::endl;
+				}
+				break;
+				default:
 				break;
 				}
 			}

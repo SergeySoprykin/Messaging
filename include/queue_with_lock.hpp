@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mutex>
-#include <deque>
+#include <queue>
 #include <algorithm>
 
 #define ASIO_STANDALONE
@@ -31,31 +31,16 @@ public:
 		return queue_.back();
 	}
 
-	T pop_front() {
+	T pop() {
 		std::scoped_lock lock(mutex_);
 		auto t = std::move(queue_.front());
-		queue_.pop_front();
+		queue_.pop();
 		return t;
 	}
 
-	T pop_back() {
+	void push(const T& item) {
 		std::scoped_lock lock(mutex_);
-		auto t = std::move(queue_.back());
-		queue_.pop_back();
-		return t;
-	}
-
-	void push_back(const T& item) {
-		std::scoped_lock lock(mutex_);
-		queue_.emplace_back(std::move(item));
-
-		std::unique_lock<std::mutex> ul(mutex_blocking_);
-		condition_variable_.notify_one();
-	}
-
-	void push_front(const T& item) {
-		std::scoped_lock lock(mutex_);
-		queue_.emplace_front(std::move(item));
+		queue_.emplace(std::move(item));
 
 		std::unique_lock<std::mutex> ul(mutex_blocking_);
 		condition_variable_.notify_one();
@@ -66,14 +51,14 @@ public:
 		return queue_.empty();
 	}
 
-	size_t count() {
+	size_t size() {
 		std::scoped_lock lock(mutex_);
 		return queue_.size();
 	}
 
-	void clear() {
-		std::scoped_lock lock(mutex_);
-		queue_.clear();
+	void clear(){
+		std::queue<T> empty;
+		std::swap( queue_, empty );
 	}
 
 	void wait() {
@@ -85,7 +70,7 @@ public:
 
 protected:
 	std::mutex mutex_;
-	std::deque<T> queue_;
+	std::queue<T> queue_;
 	std::condition_variable condition_variable_;
 	std::mutex mutex_blocking_;
 };

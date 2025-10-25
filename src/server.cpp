@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "message.hpp"
 
 namespace simple_messaging
 {
@@ -39,13 +40,12 @@ namespace simple_messaging
 					std::shared_ptr<connection> new_connection = 
 						std::make_shared<connection>(connection::owner::server,	asio_context_, std::move(socket), input_messages_queue_);
 					client_id_counter_++;
-					if (on_client_connecting(new_connection, client_id_counter_)) {								
-						connections_map_[std::to_string(client_id_counter_)] = (std::move(new_connection));
-						connections_map_[std::to_string(client_id_counter_)]->connect_to_client(std::to_string(client_id_counter_));
-						std::cout << "[" << client_id_counter_ << "] Connection Approved" << std::endl;
-					} else {
-						std::cout << " Connection Denied" << std::endl;;
-					}
+					on_client_connecting(new_connection, client_id_counter_);						
+					connections_map_[std::to_string(client_id_counter_)] = (std::move(new_connection));
+					connections_map_[std::to_string(client_id_counter_)]->connect_to_client(std::to_string(client_id_counter_));
+					std::cout << "[" << client_id_counter_ << "] Connection Approved" << std::endl;
+					message msg{{MessageType::ServerAskName}, ""};
+					send_message_to_client(connections_map_[std::to_string(client_id_counter_)], msg);
 				} else {
 					std::cout << "SERVER: New Connection Error: " << ec.message() << std::endl;
 				}
@@ -56,22 +56,31 @@ namespace simple_messaging
 	void server::send_message_to_client(std::shared_ptr<connection> client_connection, const message& msg) {
 		if (client_connection && client_connection->is_connected()) {
 			client_connection->send(msg);
+			if(storage_) {
+				storage_->save_message(client_connection->get_client_id(), msg.body);
+			}
 		} else {
-			std::cout << "Removing client " << client_connection->get_client_id() << std::endl;
-			client_connection.reset();
-			connections_map_.erase(client_connection->get_client_id());
+			std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
+			if(storage_) {
+				storage_->save_message(client_connection->get_client_id(), msg.body, true);
+			}
 		}
 	}
 	
 	void server::send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient)	{
-		for (auto& [_, client] : connections_map_) {
-			if (client && client->is_connected()) {
-				if(client != pIgnoreClient) {
-					client->send(msg);
+		for (auto& [_, client_connection] : connections_map_) {
+			if (client_connection && client_connection->is_connected()) {
+				if(client_connection != pIgnoreClient) {
+					client_connection->send(msg);
+					if(storage_) {
+						storage_->save_message(client_connection->get_client_id(), msg.body);
+					}
 				}
 			} else {
-		std::cout << "Removing client " << client->get_client_id() << std::endl;
-				client.reset();
+				std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
+				if(storage_) {
+					storage_->save_message(client_connection->get_client_id(), msg.body, true);
+				}
 			}
 		}
 	}
@@ -83,39 +92,68 @@ namespace simple_messaging
 
 		size_t messages_count = 0;
 		while (messages_count < max_messages && !input_messages_queue_.empty()) {
-			auto input_message = input_messages_queue_.pop_front();
-			on_message(input_message.remote, input_message.msg);
+			auto input_message = input_messages_queue_.pop();
+			process_message(input_message.remote, input_message.msg);
+			process_pending_messages();
 			messages_count++;
 		}
 	}
 
-	bool server::on_client_connecting(std::shared_ptr<connection> client, uint32_t client_id)	{
+	bool server::on_client_connecting(std::shared_ptr<connection> client_connection, uint32_t client_id)	{
 		simple_messaging::message reply_message;
 		reply_message.header.id = MessageType::ServerAccept;
 		std::stringstream ss;
 		ss << client_id;
 		reply_message.body = ss.str();
 		reply_message.header.size  = reply_message.body.size();
-		client->send(reply_message);
+		client_connection->send(reply_message);
 		return true;
 	}
 
-	void server::on_message(std::shared_ptr<connection> client, message& msg) {
+	void server::process_message(std::shared_ptr<connection> client_connection, message& msg) {
 		switch (msg.header.id) {
 		case MessageType::ServerPing: {
-				std::cout << "[" << client->get_client_id() << "]: Server Ping" << std::endl;
-				client->send(msg);
+				std::cout << "[" << client_connection->get_client_id() << "]: Server Ping" << std::endl;
+				client_connection->send(msg);
 			}
 			break;
 		case MessageType::MessageAll: {
-				std::cout << "[" << client->get_client_id() << "]: Message All" << std::endl;;
+				std::cout << "[" << client_connection->get_client_id() << "]: Message All" << std::endl;
 				msg.header.id = MessageType::ServerMessage;
-				send_message_to_all_clients(msg, client);
+				send_message_to_all_clients(msg, client_connection);
+			}
+			break;
+		case MessageType::MessageClient: {
+				std::string destination_client_name = msg.body.substr(0, msg.body.find(":"));
+				msg.header.id = MessageType::ServerMessage;
+				if(client_name_to_id_.count(destination_client_name) > 0) {
+					std::cout << "[" << client_connection->get_client_id() << "]: Message to " << destination_client_name << std::endl;
+					auto destination_client_connection = connections_map_[client_name_to_id_[destination_client_name]];
+					send_message_to_client(destination_client_connection, msg);
+				}
+			}
+			break;
+		case MessageType::ServerTellName: {
+				std::cout << "[" << client_connection->get_client_id() << "]: Message <" << msg.body <<  ">" << std::endl;
+				client_name_to_id_[msg.body] = client_connection->get_client_id();
 			}
 			break;
 		default:
 			break;
 		}
+	}
+
+	void server::process_pending_messages() {
+		if (storage_) {
+			auto pending_messages = storage_->list_messages();
+			for (const auto& pending_message : pending_messages) {
+				std::cout << pending_message << std::endl;
+			}
+		}
+	}
+
+	void server::set_storage(std::shared_ptr<messages_storage> messages_storage) {
+		storage_ = messages_storage;
 	}
 
 }
