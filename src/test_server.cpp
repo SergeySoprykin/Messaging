@@ -1,0 +1,10 @@
+#include "Server.hpp"
+
+int main() {
+	simple_messaging::server server(60000); 
+	server.start();
+	while (true) {
+		server.update(-1, true);
+	}
+	return 0;
+}

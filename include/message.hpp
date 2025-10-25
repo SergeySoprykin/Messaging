@@ -1,0 +1,72 @@
+#pragma once
+#include <memory>
+#include <iostream>
+#include <cstdint>
+
+#define ASIO_STANDALONE
+#include <boost/asio.hpp>
+#include <boost/asio/ts/buffer.hpp>
+#include <boost/asio/ts/internet.hpp>
+
+namespace simple_messaging
+{
+enum class MessageType : uint32_t {
+	ServerAccept,
+	ServerDeny,
+	ServerPing,
+	MessageAll,
+	ServerMessage,
+};
+
+struct message_header {
+	MessageType id{};
+	uint32_t size = 0;
+};
+
+struct message {
+	message_header header{};
+	std::string body;
+
+	size_t size() const {
+		return body.size();
+	}
+
+	friend std::ostream& operator << (std::ostream& os, const message& msg)	{
+		os << "ID:" << int(msg.header.id) << " Size:" << msg.header.size;
+		return os;
+	}
+
+	template<typename DataType>
+	friend message& operator << (message& msg, const DataType& data) {
+		static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into vector");
+		size_t i = msg.body.size();
+		msg.body.resize(msg.body.size() + sizeof(DataType));
+		std::memcpy(msg.body.data() + i, &data, sizeof(DataType));
+		msg.header.size = msg.size();
+		return msg;
+	}
+
+	template<typename DataType>
+	friend message& operator >> (message& msg, DataType& data) {
+		static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pulled from vector");
+		size_t i = msg.body.size() - sizeof(DataType);
+		std::memcpy(&data, msg.body.data() + i, sizeof(DataType));
+		msg.body.resize(i);
+		msg.header.size = msg.size();
+		return msg;
+	}			
+};
+
+class connection;
+struct owned_message {
+	std::shared_ptr<connection> remote = nullptr;
+	message msg;
+
+	friend std::ostream& operator<<(std::ostream& os, const owned_message& msg) {
+		os << msg.msg;
+		return os;
+	}
+};		
+
+
+}
