@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <string>
 #include <thread>
 
 int main(int argc, char* argv[])
@@ -23,6 +24,7 @@ int main(int argc, char* argv[])
 	client1.connect("127.0.0.1", 60000);
 
 	bool quit_requested = false;
+	std::size_t message_no = 1;
 	while (!quit_requested) {
 		// std::this_thread::sleep_for(std::chrono::seconds(2));
 		// client1.ping_server();
@@ -30,7 +32,9 @@ int main(int argc, char* argv[])
     	// client1.send_to_all("Hello all from " + client1.get_name());
 
 		std::this_thread::sleep_for(std::chrono::seconds(2));
-    	client1.send_to_client(dest_name, "Hi from " + my_name);
+		std::string message_to_send = "MSG " + std::to_string(message_no++) + " Hi from " + my_name;
+    	client1.send_to_client(dest_name,  message_to_send);
+		std::cout << " -> " << message_to_send << std::endl;
 
 		if (client1.is_connected()) {
 			if (!client1.get_incoming_messages().empty()) {
@@ -53,7 +57,7 @@ int main(int argc, char* argv[])
 				}
 				break;
 				case simple_messaging::MessageType::ServerMessage: {
-					std::cout << msg.body << std::endl;
+					std::cout << " <- " << msg.body << std::endl;
 				}
 				break;
 				case simple_messaging::MessageType::ServerAskName: {

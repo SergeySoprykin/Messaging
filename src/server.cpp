@@ -1,5 +1,7 @@
 #include "server.hpp"
 #include "message.hpp"
+#include <chrono>
+#include <thread>
 
 namespace simple_messaging
 {
@@ -53,19 +55,29 @@ namespace simple_messaging
 			});
 	}
 
-	void server::send_message_to_client(std::shared_ptr<connection> client_connection, const message& msg) {
+	bool server::send_message_to_client(std::shared_ptr<connection> client_connection, const message& msg, bool save_to_pending) {
 		if (client_connection && client_connection->is_connected()) {
 			client_connection->send(msg);
-			if(storage_) {
-				storage_->save_message(client_connection->get_client_id(), msg.body);
+			if(storage_ ) {
+				storage_->save_message( msg.body);
 			}
-		} else {
-			std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
-			if(storage_) {
-				storage_->save_message(client_connection->get_client_id(), msg.body, true);
-			}
+			return true;
 		}
+		std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
+		if(storage_ && save_to_pending) {
+			storage_->save_message(msg.body, true);
+		}
+		return false;
 	}
+
+	bool server::send_message_to_client_by_name(std::string client_name, const message& msg, bool save_to_pending) {
+		if(client_name_to_id_.count(client_name) > 0) {
+			auto destination_client_connection = connections_map_[client_name_to_id_[client_name]];
+			return send_message_to_client(destination_client_connection, msg, save_to_pending);
+		}
+		return false;
+	}
+
 	
 	void server::send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient)	{
 		for (auto& [_, client_connection] : connections_map_) {
@@ -73,13 +85,13 @@ namespace simple_messaging
 				if(client_connection != pIgnoreClient) {
 					client_connection->send(msg);
 					if(storage_) {
-						storage_->save_message(client_connection->get_client_id(), msg.body);
+						storage_->save_message(msg.body);
 					}
 				}
 			} else {
 				std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
 				if(storage_) {
-					storage_->save_message(client_connection->get_client_id(), msg.body, true);
+					storage_->save_message(msg.body, true);
 				}
 			}
 		}
@@ -145,9 +157,15 @@ namespace simple_messaging
 
 	void server::process_pending_messages() {
 		if (storage_) {
-			auto pending_messages = storage_->list_messages();
-			for (const auto& pending_message : pending_messages) {
-				std::cout << pending_message << std::endl;
+			auto pending_messages_files = storage_->list_messages();
+			std::cout << "Pending messages: " << pending_messages_files.size() << std::endl;
+			for (const auto& pending_message_file : pending_messages_files) {
+				std::string pending_message = storage_->read_message(pending_message_file, true);
+				std::string destination_client_name = pending_message.substr(0, pending_message.find(":"));
+				message msg {{MessageType::ServerMessage, static_cast<uint32_t>(pending_message.size())}, pending_message};
+				if (send_message_to_client_by_name(destination_client_name, msg, false)) {
+					storage_->move_to_delivered(pending_message_file);
+				}
 			}
 		}
 	}

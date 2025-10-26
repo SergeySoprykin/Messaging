@@ -18,7 +18,7 @@ public:
         create_directories();
     }
     
-    bool save_message(const std::string destination_id, const std::string& message, bool is_pending = false) {
+    bool save_message(const std::string& message, bool is_pending = false) {
         try {
             std::string filename = generate_filename(is_pending ? "temp" : "perm");
             std::string full_path = get_full_path(filename, is_pending);
@@ -29,7 +29,7 @@ public:
                 return false;
             }
             
-            file << destination_id << ":" << message;
+            file << message;
             file.close();
             
             return true;

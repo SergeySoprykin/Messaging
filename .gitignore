@@ -1,3 +1,5 @@
 build/
 .vscode/
 .cache/
+src/permanent_storage/
+src/temp_storage/

@@ -58,7 +58,7 @@ namespace simple_messaging
 		simple_messaging::message msg;
 		msg.header.id = MessageType::MessageClient;
 		msg.body = destination + ":" + body;
-		msg.header.size = body.size();
+		msg.header.size = msg.body.size();
 		send(msg);
 	}
 
