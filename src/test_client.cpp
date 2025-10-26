@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 		std::this_thread::sleep_for(std::chrono::seconds(2));
 		std::string message_to_send = "MSG " + std::to_string(message_no++) + " Hi from " + my_name;
     	client1.send_to_client(dest_name,  message_to_send);
-		std::cout << " -> " << message_to_send << std::endl;
+		std::cout << "                            -> " << message_to_send << std::endl;
 
 		if (client1.is_connected()) {
 			if (!client1.get_incoming_messages().empty()) {

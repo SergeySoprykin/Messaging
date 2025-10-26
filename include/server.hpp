@@ -29,7 +29,7 @@ public:
 	void send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient = nullptr);
 	void update(size_t nMaxMessages = -1, bool bWait = false);
 
-	void set_storage(std::shared_ptr<messages_storage> messages_storages);
+	void set_storage(std::shared_ptr<IStorage> messages_storage);
 
 private: 
 	virtual bool on_client_connecting(std::shared_ptr<connection> client, uint32_t client_id);
@@ -45,7 +45,7 @@ private:
 	boost::asio::ip::tcp::acceptor asio_acceptor_;
 	uint32_t client_id_counter_ = 10000;
 
-	std::shared_ptr<messages_storage> storage_ = nullptr;
+	std::shared_ptr<IStorage> storage_ = nullptr;
 };
 
 }

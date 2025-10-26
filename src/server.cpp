@@ -170,7 +170,7 @@ namespace simple_messaging
 		}
 	}
 
-	void server::set_storage(std::shared_ptr<messages_storage> messages_storage) {
+	void server::set_storage(std::shared_ptr<IStorage> messages_storage) {
 		storage_ = messages_storage;
 	}
 

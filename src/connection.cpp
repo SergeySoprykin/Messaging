@@ -70,7 +70,6 @@ namespace simple_messaging
 						}
 					}
 				} else {
-					std::cout << "[" << client_id_ << "] Write Header Fail.\n";
 					socket_.close();
 				}
 			});
@@ -86,7 +85,6 @@ namespace simple_messaging
 						write_header();
 					}
 				} else {
-					std::cout << "[" << client_id_ << "] Write Body Fail.\n";
 					socket_.close();
 				}
 			});
@@ -103,7 +101,6 @@ namespace simple_messaging
 						add_to_incoming_messages_queue();
 					}
 				} else {
-					std::cout << "[" << client_id_ << "] Read Header Fail.\n";
 					socket_.close();
 				} });
 	}
@@ -115,7 +112,6 @@ namespace simple_messaging
 					add_to_incoming_messages_queue();
 				}
 				else {
-					std::cout << "[" << client_id_ << "] Read Body Fail.\n";
 					socket_.close();
 				}
 			});

@@ -11,7 +11,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 set(SOURCES
-    src/server.cpp src/client.cpp src/connection.cpp
+    src/server.cpp src/client.cpp src/connection.cpp src/messages_storage.cpp
 )
 
 include_directories(./include)

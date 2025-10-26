@@ -4,8 +4,8 @@
 
 int main() {
 	simple_messaging::server server(60000); 
-	messages_storage storage;
-	server.set_storage(std::make_shared<messages_storage>(storage));
+	simple_messaging::messages_storage storage;
+	server.set_storage(std::make_shared<simple_messaging::messages_storage>(storage));
 	server.start();
 	while (true) {
 		server.update(-1, true);
