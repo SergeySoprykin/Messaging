@@ -43,15 +43,7 @@ namespace simple_messaging
 		msg.header.id = MessageType::ServerPing;
 		std::chrono::system_clock::time_point timeNow = std::chrono::system_clock::now();		
 		msg << timeNow;
-		send(msg);
-	}
-
-	void client::send_to_all(const std::string body) {
-		simple_messaging::message msg;
-		msg.header.id = MessageType::MessageAll;
-		msg.header.size = body.size();
-		msg.body = body;
-		send(msg);
+		send_to_server(msg);
 	}
 
 	void client::send_to_client(const std::string destination, const std::string body) {
@@ -59,11 +51,11 @@ namespace simple_messaging
 		msg.header.id = MessageType::MessageClient;
 		msg.body = destination + ":" + body;
 		msg.header.size = msg.body.size();
-		send(msg);
+		send_to_server(msg);
 	}
 
 
-	void client::send(const message& msg) {
+	void client::send_to_server(const message& msg) {
 		if (is_connected()) {
 			connection_->send(msg);
 		}

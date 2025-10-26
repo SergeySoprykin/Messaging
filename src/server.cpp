@@ -78,25 +78,6 @@ namespace simple_messaging
 		return false;
 	}
 
-	
-	void server::send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient)	{
-		for (auto& [_, client_connection] : connections_map_) {
-			if (client_connection && client_connection->is_connected()) {
-				if(client_connection != pIgnoreClient) {
-					client_connection->send(msg);
-					if(storage_) {
-						storage_->save_message(msg.body);
-					}
-				}
-			} else {
-				std::cout << "Client " << client_connection->get_client_id() << " unreachable" << std::endl;
-				if(storage_) {
-					storage_->save_message(msg.body, true);
-				}
-			}
-		}
-	}
-
 	void server::update(size_t max_messages, bool wait) {
 		if (wait) { 
 			input_messages_queue_.wait();
@@ -129,12 +110,6 @@ namespace simple_messaging
 				client_connection->send(msg);
 			}
 			break;
-		case MessageType::MessageAll: {
-				std::cout << "[" << client_connection->get_client_id() << "]: Message All" << std::endl;
-				msg.header.id = MessageType::ServerMessage;
-				send_message_to_all_clients(msg, client_connection);
-			}
-			break;
 		case MessageType::MessageClient: {
 				std::string destination_client_name = msg.body.substr(0, msg.body.find(":"));
 				msg.header.id = MessageType::ServerMessage;
@@ -146,7 +121,7 @@ namespace simple_messaging
 			}
 			break;
 		case MessageType::ServerTellName: {
-				std::cout << "[" << client_connection->get_client_id() << "]: Message <" << msg.body <<  ">" << std::endl;
+				std::cout << "[" << client_connection->get_client_id() << "]: New client " << msg.body  << std::endl;
 				client_name_to_id_[msg.body] = client_connection->get_client_id();
 			}
 			break;

@@ -17,13 +17,14 @@ public:
 	bool is_connected();
 	void ping_server();
 	void send_to_client(const std::string destination, const std::string body);
-	void send_to_all(const std::string body);
-	void send(const message& msg);
+	void send_to_server(const message& msg);
 
 	void set_name(std::string new_id);
 	std::string get_name();
 
 	queue_with_lock<owned_message>& get_incoming_messages();
+
+	virtual void process_incoming_messages() {}
 
 private:
 	boost::asio::io_context asio_context_;

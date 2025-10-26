@@ -17,7 +17,6 @@ enum class MessageType : uint32_t {
 	ServerTellName,
 	ServerPing,
 	MessageClient,
-	MessageAll,
 	ServerMessage,
 };
 
