@@ -55,6 +55,17 @@ namespace simple_messaging
 			});
 	}
 
+	bool server::on_client_connecting(std::shared_ptr<connection> client_connection, uint32_t client_id)	{
+		simple_messaging::message reply_message;
+		reply_message.header.id = MessageType::ServerAccept;
+		std::stringstream ss;
+		ss << client_id;
+		reply_message.body = ss.str();
+		reply_message.header.size  = reply_message.body.size();
+		client_connection->send(reply_message);
+		return true;
+	}
+
 	bool server::send_message_to_client(std::shared_ptr<connection> client_connection, const message& msg, bool save_to_pending) {
 		if (client_connection && client_connection->is_connected()) {
 			client_connection->send(msg);
@@ -78,29 +89,13 @@ namespace simple_messaging
 		return false;
 	}
 
-	void server::process_input_messages(size_t max_messages, bool wait) {
-		if (wait) { 
-			input_messages_queue_.wait();
-		}
-
-		size_t messages_count = 0;
-		while (messages_count < max_messages && !input_messages_queue_.empty()) {
+	void server::process_input_messages() {
+		input_messages_queue_.wait();
+		while (!input_messages_queue_.empty()) {
 			auto input_message = input_messages_queue_.pop();
 			process_message(input_message.remote, input_message.msg);
 			process_pending_messages();
-			messages_count++;
 		}
-	}
-
-	bool server::on_client_connecting(std::shared_ptr<connection> client_connection, uint32_t client_id)	{
-		simple_messaging::message reply_message;
-		reply_message.header.id = MessageType::ServerAccept;
-		std::stringstream ss;
-		ss << client_id;
-		reply_message.body = ss.str();
-		reply_message.header.size  = reply_message.body.size();
-		client_connection->send(reply_message);
-		return true;
 	}
 
 	void server::process_message(std::shared_ptr<connection> client_connection, message& msg) {

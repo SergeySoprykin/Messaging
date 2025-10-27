@@ -25,7 +25,7 @@ public:
 	bool start();
 	void stop();
 	bool send_message_to_client(std::shared_ptr<connection> client, const message& msg, bool save_to_pending = true);
-	void process_input_messages(size_t nMaxMessages = -1, bool bWait = false);
+	void process_input_messages();
 
 	void set_storage(std::shared_ptr<IStorage> messages_storage);
 

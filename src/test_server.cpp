@@ -8,7 +8,7 @@ int main() {
 	server.set_storage(std::make_shared<simple_messaging::messages_storage>(storage));
 	server.start();
 	while (true) {
-		server.process_input_messages(-1, true);
+		server.process_input_messages();
 	}
 	return 0;
 }
