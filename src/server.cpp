@@ -1,6 +1,5 @@
 #include "server.hpp"
 #include "message.hpp"
-#include <chrono>
 #include <thread>
 
 namespace simple_messaging
@@ -93,7 +92,7 @@ namespace simple_messaging
 		input_messages_queue_.wait();
 		while (!input_messages_queue_.empty()) {
 			auto input_message = input_messages_queue_.pop();
-			process_message(input_message.remote, input_message.msg);
+			process_message(input_message.source_client, input_message.msg);
 			process_pending_messages();
 		}
 	}

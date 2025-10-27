@@ -31,7 +31,8 @@ public:
 				}
 				break;
 				case simple_messaging::MessageType::ServerMessage: {
-					std::cout << " <- " << msg.body << std::endl;
+					std::string message = msg.body.substr(msg.body.find(":") +1 , msg.body.size());
+					std::cout << " <- " << message << std::endl;
 				}
 				break;
 				case simple_messaging::MessageType::ServerAskName: {
@@ -65,18 +66,17 @@ int main(int argc, char* argv[]) {
 	my_client msg_client;
 	msg_client.set_name(my_name);
 	msg_client.connect_to_server("127.0.0.1", 60000);
-	std::size_t message_no = 1;
+	std::size_t message_no = 0;
 	while (msg_client.is_connected()) {
-		if (message_no == 1) {
-			msg_client.ping_server();
-		}
-		std::this_thread::sleep_for(std::chrono::seconds(2));
-		std::string message_to_send = "MSG " + std::to_string(message_no++) + " Hi from " + my_name;	
-    	msg_client.send_to_another_client(dest_name,  message_to_send);
-
-		std::cout << "                            -> " << message_to_send << std::endl;
-
 		msg_client.process_incoming_messages();
+		if (message_no++ == 1) {
+			msg_client.ping_server();
+			continue;
+		}
+		std::this_thread::sleep_for(std::chrono::seconds(4));
+		std::string message_to_send = "MSG " + std::to_string(message_no) + " Hi from " + my_name;	
+    	msg_client.send_to_another_client(dest_name,  message_to_send);
+		std::cout << "                            -> " << message_to_send << std::endl;
 	}
 	std::cout << "Server down" << std::endl;
 	return 0;

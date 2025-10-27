@@ -3,7 +3,6 @@
 #include <iostream>
 #include <cstdint>
 
-#define ASIO_STANDALONE
 #include <boost/asio.hpp>
 #include <boost/asio/ts/buffer.hpp>
 #include <boost/asio/ts/internet.hpp>
@@ -33,11 +32,6 @@ struct message {
 		return body.size();
 	}
 
-	friend std::ostream& operator << (std::ostream& os, const message& msg)	{
-		os << "ID:" << int(msg.header.id) << " Size:" << msg.header.size;
-		return os;
-	}
-
 	template<typename DataType>
 	friend message& operator << (message& msg, const DataType& data) {
 		static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into vector");
@@ -61,14 +55,9 @@ struct message {
 
 class connection;
 struct owned_message {
-	std::shared_ptr<connection> remote = nullptr;
+	std::shared_ptr<connection> source_client = nullptr;
 	message msg;
 
-	friend std::ostream& operator<<(std::ostream& os, const owned_message& msg) {
-		os << msg.msg;
-		return os;
-	}
 };		
-
 
 }
