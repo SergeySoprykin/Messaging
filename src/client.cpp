@@ -4,15 +4,15 @@ namespace simple_messaging
 {
 
 	client::~client() {
-		disconnect();
+		disconnect_from_server();
 	}
 
-	bool client::connect(const std::string& host, const uint16_t port) {
+	bool client::connect_to_server(const std::string& host, const uint16_t port) {
 		try {
 			boost::asio::ip::tcp::resolver resolver(asio_context_);
 			boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
 
-			connection_ = std::make_unique<connection>(connection::owner::client, asio_context_, boost::asio::ip::tcp::socket(asio_context_), incoming_messages_queue_);
+			connection_ = std::make_unique<connection>(connection::owner::client, asio_context_, boost::asio::ip::tcp::socket(asio_context_), input_messages_queue_);
 			connection_->connect_to_server(endpoints);
 			asio_context_thread_ = std::thread([this]() { asio_context_.run(); });
 		}
@@ -23,7 +23,7 @@ namespace simple_messaging
 		return true;
 	}
 
-	void client::disconnect() {
+	void client::disconnect_from_server() {
 		if(is_connected()) {
 			connection_->disconnect();
 		}
@@ -46,7 +46,7 @@ namespace simple_messaging
 		send_to_server(msg);
 	}
 
-	void client::send_to_client(const std::string destination, const std::string body) {
+	void client::send_to_another_client(const std::string destination, const std::string body) {
 		simple_messaging::message msg;
 		msg.header.id = MessageType::MessageClient;
 		msg.body = destination + ":" + body;
@@ -61,7 +61,7 @@ namespace simple_messaging
 		}
 	}
 
-	void client::set_name(std::string new_id) {
+	void client::set_name(const std::string& new_id) {
 		id_ = new_id;
 	}
 
@@ -69,8 +69,8 @@ namespace simple_messaging
 		return id_;
 	}
 
-	queue_with_lock<owned_message>& client::get_incoming_messages() { 
-		return incoming_messages_queue_;
+	queue_with_lock<owned_message>& client::get_input_messages() { 
+		return input_messages_queue_;
 	}
 
 }

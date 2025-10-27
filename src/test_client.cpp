@@ -11,8 +11,8 @@ class my_client : public simple_messaging::client {
 public:
 	virtual void process_incoming_messages() override {
 		if (is_connected()) {
-			if (!get_incoming_messages().empty()) {
-				auto msg = get_incoming_messages().pop().msg;
+			if (!get_input_messages().empty()) {
+				auto msg = get_input_messages().pop().msg;
 
 				switch (msg.header.id) {
 				case simple_messaging::MessageType::ServerAccept: {
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
 	my_client msg_client;
 	msg_client.set_name(my_name);
-	msg_client.connect("127.0.0.1", 60000);
+	msg_client.connect_to_server("127.0.0.1", 60000);
 	std::size_t message_no = 1;
 	while (msg_client.is_connected()) {
 		if (message_no == 1) {
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 		}
 		std::this_thread::sleep_for(std::chrono::seconds(2));
 		std::string message_to_send = "MSG " + std::to_string(message_no++) + " Hi from " + my_name;	
-    	msg_client.send_to_client(dest_name,  message_to_send);
+    	msg_client.send_to_another_client(dest_name,  message_to_send);
 
 		std::cout << "                            -> " << message_to_send << std::endl;
 

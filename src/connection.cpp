@@ -4,7 +4,7 @@ namespace simple_messaging
 {
 
 	connection::connection(owner parent, boost::asio::io_context& asio_context, boost::asio::ip::tcp::socket socket, queue_with_lock<owned_message>& input_messages_queue)
-		: socket_(std::move(socket)), asio_context_(asio_context), input_messages_queue_(input_messages_queue) {
+		: asio_socket_(std::move(socket)), asio_context_(asio_context), input_messages_queue_(input_messages_queue) {
 		owner_ = parent;
 	}
 
@@ -16,7 +16,7 @@ namespace simple_messaging
 
 	void connection::connect_to_client(const std::string& new_client_id) {
 		if (owner_ == owner::server) {
-			if (socket_.is_open()) {
+			if (asio_socket_.is_open()) {
 				client_id_ = new_client_id;
 				read_message_header();
 			}
@@ -25,7 +25,7 @@ namespace simple_messaging
 
 	void connection::connect_to_server(const boost::asio::ip::tcp::resolver::results_type& endpoints) {
 		if (owner_ == owner::client) {
-			boost::asio::async_connect(socket_, endpoints,
+			boost::asio::async_connect(asio_socket_, endpoints,
 				[this](std::error_code ec, [[maybe_unused]]boost::asio::ip::tcp::endpoint endpoint) {
 					if (!ec) {
 						read_message_header();
@@ -36,12 +36,12 @@ namespace simple_messaging
 
 	void connection::disconnect() {
 		if (is_connected()) {
-			boost::asio::post(asio_context_, [this]() { socket_.close(); });
+			boost::asio::post(asio_context_, [this]() { asio_socket_.close(); });
 		}
 	}
 
 	bool connection::is_connected() const {
-		return socket_.is_open();
+		return asio_socket_.is_open();
 	}
 
 	void connection::start_listening() {}
@@ -52,46 +52,46 @@ namespace simple_messaging
 				bool already_writing = !output_messages_queue_.empty();
 				output_messages_queue_.push(msg);
 				if (!already_writing) {
-					write_header();
+					write_message_header();
 				}
 			});
 	}
 
-	void connection::write_header() {
-		boost::asio::async_write(socket_, boost::asio::buffer(&output_messages_queue_.front().header, sizeof(message_header)),
+	void connection::write_message_header() {
+		boost::asio::async_write(asio_socket_, boost::asio::buffer(&output_messages_queue_.front().header, sizeof(message_header)),
 			[this](std::error_code ec, [[maybe_unused]]std::size_t length) {
 				if (!ec) {
 					if (output_messages_queue_.front().header.size > 0)	{
-						write_body();
+						write_message_body();
 					} else {
 						output_messages_queue_.pop();
 						if (!output_messages_queue_.empty()) {
-							write_header();
+							write_message_header();
 						}
 					}
 				} else {
-					socket_.close();
+					asio_socket_.close();
 				}
 			});
 	}
 
-	void connection::write_body() {
-		boost::asio::async_write(socket_, boost::asio::buffer(output_messages_queue_.front().body.data(), output_messages_queue_.front().header.size),
+	void connection::write_message_body() {
+		boost::asio::async_write(asio_socket_, boost::asio::buffer(output_messages_queue_.front().body.data(), output_messages_queue_.front().header.size),
 			[this](std::error_code ec, [[maybe_unused]]std::size_t length)
 			{
 				if (!ec) {
 					output_messages_queue_.pop();
 					if (!output_messages_queue_.empty()) {
-						write_header();
+						write_message_header();
 					}
 				} else {
-					socket_.close();
+					asio_socket_.close();
 				}
 			});
 	}
 
 	void connection::read_message_header() {
-		boost::asio::async_read(socket_, boost::asio::buffer(&message_in_construction_.header, sizeof(message_header)),
+		boost::asio::async_read(asio_socket_, boost::asio::buffer(&message_in_construction_.header, sizeof(message_header)),
 			[this](std::error_code ec, [[maybe_unused]]std::size_t length){					
 				if (!ec) {
 					if (message_in_construction_.header.size > 0) {
@@ -101,18 +101,18 @@ namespace simple_messaging
 						add_to_incoming_messages_queue();
 					}
 				} else {
-					socket_.close();
+					asio_socket_.close();
 				} });
 	}
 
 	void connection::read_message_body()	{
-		boost::asio::async_read(socket_, boost::asio::buffer(message_in_construction_.body.data(), message_in_construction_.header.size),
+		boost::asio::async_read(asio_socket_, boost::asio::buffer(message_in_construction_.body.data(), message_in_construction_.header.size),
 			[this](std::error_code ec, [[maybe_unused]]std::size_t length) {						
 				if (!ec) {
 					add_to_incoming_messages_queue();
 				}
 				else {
-					socket_.close();
+					asio_socket_.close();
 				}
 			});
 	}

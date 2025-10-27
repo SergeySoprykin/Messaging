@@ -23,17 +23,17 @@ public:
 	void connect_to_server(const boost::asio::ip::tcp::resolver::results_type& endpoints);
 	void disconnect();
 	bool is_connected() const;
-	void start_listening();
 	void send(const message& msg);
 
 private:
-	void write_header();
-	void write_body();
+	void start_listening();
+	void write_message_header();
+	void write_message_body();
 	void read_message_header();
 	void read_message_body();
 	void add_to_incoming_messages_queue();
 
-	boost::asio::ip::tcp::socket socket_;
+	boost::asio::ip::tcp::socket asio_socket_;
 	boost::asio::io_context& asio_context_;
 
 	queue_with_lock<message> output_messages_queue_;

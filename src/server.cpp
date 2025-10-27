@@ -78,7 +78,7 @@ namespace simple_messaging
 		return false;
 	}
 
-	void server::update(size_t max_messages, bool wait) {
+	void server::process_input_messages(size_t max_messages, bool wait) {
 		if (wait) { 
 			input_messages_queue_.wait();
 		}

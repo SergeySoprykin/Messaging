@@ -24,18 +24,18 @@ public:
 
 	bool start();
 	void stop();
-	void wait_for_client_connection();
 	bool send_message_to_client(std::shared_ptr<connection> client, const message& msg, bool save_to_pending = true);
-	void send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient = nullptr);
-	void update(size_t nMaxMessages = -1, bool bWait = false);
+	void process_input_messages(size_t nMaxMessages = -1, bool bWait = false);
 
 	void set_storage(std::shared_ptr<IStorage> messages_storage);
 
 private: 
-	virtual bool on_client_connecting(std::shared_ptr<connection> client, uint32_t client_id);
-	virtual void process_message(std::shared_ptr<connection> client, message& msg);
-	virtual void process_pending_messages();
-	virtual bool send_message_to_client_by_name(std::string client_name, const message& msg, bool save_to_pending);
+	bool on_client_connecting(std::shared_ptr<connection> client, uint32_t client_id);
+	void process_message(std::shared_ptr<connection> client, message& msg);
+	void process_pending_messages();
+	bool send_message_to_client_by_name(std::string client_name, const message& msg, bool save_to_pending);
+	void send_message_to_all_clients(const message& msg, std::shared_ptr<connection> pIgnoreClient = nullptr);
+	void wait_for_client_connection();
 
 	queue_with_lock<owned_message> input_messages_queue_;
 	std::unordered_map<std::string, std::shared_ptr<connection>> connections_map_;

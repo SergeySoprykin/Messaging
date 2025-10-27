@@ -33,28 +33,6 @@ bool messages_storage::save_message(const std::string& message, bool is_pending)
     }
 }
 
-bool messages_storage::delete_message(const std::string& filename, bool isTemporary) {
-    try {
-        std::string fullPath = get_full_path(filename, isTemporary);
-        
-        if (!fs::exists(fullPath)) {
-            std::cerr << "Error: file " << fullPath << " does not exist" << std::endl;
-            return false;
-        }
-        
-        if (fs::remove(fullPath)) {
-            return true;
-        } else {
-            std::cerr << "Error: unable remove file " << filename << std::endl;
-            return false;
-        }
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error deleting message: " << e.what() << std::endl;
-        return false;
-    }
-}
-
 std::string messages_storage::read_message(const std::string& filename, bool isTemporary) {
     try {
         std::string fullPath = get_full_path(filename, isTemporary);

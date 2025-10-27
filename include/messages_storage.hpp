@@ -16,9 +16,8 @@ class messages_storage : public IStorage{
 public:
     messages_storage(const std::string& tempPath = "./temp_storage", 
                    const std::string& permanentPath = "./permanent_storage");
-                   
+
     bool save_message(const std::string& message, bool is_pending = false) override;
-    bool delete_message(const std::string& filename, bool isTemporary = false) override;
     std::string read_message(const std::string& filename, bool isTemporary = false) override;
     std::vector<std::string> list_messages(bool pending = true) override;
     bool move_to_delivered(const std::string& filename) override;
